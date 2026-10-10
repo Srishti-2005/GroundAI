@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Mail, Plus, Clock, Users, Calendar as CalendarIcon, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Mail, Plus, Calendar as CalendarIcon, CheckCircle2, Circle, Trash2 } from 'lucide-react';
 import { CalendarEvent } from '../../types';
+import { sounds } from '../../utils/audio';
 
 interface CalendarViewProps {
   events: CalendarEvent[];
@@ -10,21 +11,40 @@ interface CalendarViewProps {
 export const CalendarView: React.FC<CalendarViewProps> = ({ events, onAddEvent }) => {
   const [selectedDay, setSelectedDay] = useState<number>(23);
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
+  const [eventTypeFilter, setEventTypeFilter] = useState<'all' | 'coaching' | 'training' | 'huddle' | 'customer'>('all');
+  const [completedEventIds, setCompletedEventIds] = useState<Set<string>>(new Set());
+
   const [newTitle, setNewTitle] = useState<string>('');
   const [newTime, setNewTime] = useState<string>('02:00 PM');
   const [newMeta, setNewMeta] = useState<string>('With Customer · Callback on Ortho GRID');
+  const [newType, setNewType] = useState<'coaching' | 'training' | 'huddle' | 'customer'>('customer');
 
-  // Month is October 2026 per assignment timestamp
   const monthName = 'October 2026';
   const daysInMonth = 31;
   const startDayOfWeek = 4; // Thursday Oct 1 2026
 
   const daysWithEvents = new Set(events.map(e => e.day));
-  const selectedDayEvents = events.filter(e => e.day === selectedDay);
+
+  const filteredDayEvents = events.filter(e => {
+    if (e.day !== selectedDay) return false;
+    if (eventTypeFilter !== 'all' && e.type !== eventTypeFilter) return false;
+    return true;
+  });
+
+  const toggleEventComplete = (id: string) => {
+    sounds.playSuccess();
+    setCompletedEventIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const handleCreateEvent = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
+    sounds.playSuccess();
     const item: CalendarEvent = {
       id: `cal-custom-${Date.now()}`,
       day: selectedDay,
@@ -33,7 +53,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, onAddEvent }
       time: newTime,
       title: newTitle,
       meta: newMeta,
-      type: 'customer'
+      type: newType
     };
     onAddEvent(item);
     setNewTitle('');
@@ -53,7 +73,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, onAddEvent }
           <button
             className="btn-primary"
             style={{ background: '#ffffff', color: '#1e3a8a' }}
-            onClick={() => setShowAddModal(true)}
+            onClick={() => {
+              sounds.playBeep(520, 0.05);
+              setShowAddModal(true);
+            }}
           >
             <Plus size={16} />
             <span>Add Event</span>
@@ -102,7 +125,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, onAddEvent }
               <button
                 className="btn-secondary"
                 style={{ padding: '6px 10px', fontSize: '12px' }}
-                onClick={() => setSelectedDay(10)} // Jump to today Oct 10
+                onClick={() => {
+                  sounds.playBeep(480, 0.04);
+                  setSelectedDay(10); // Jump to today Oct 10
+                }}
               >
                 Today
               </button>
@@ -115,6 +141,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, onAddEvent }
               <button
                 className="btn-secondary"
                 style={{ padding: '6px 8px' }}
+                onClick={() => sounds.playBeep(440, 0.04)}
                 title="Previous Month"
               >
                 <ChevronLeft size={16} />
@@ -122,6 +149,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, onAddEvent }
               <button
                 className="btn-secondary"
                 style={{ padding: '6px 8px' }}
+                onClick={() => sounds.playBeep(440, 0.04)}
                 title="Next Month"
               >
                 <ChevronRight size={16} />
@@ -140,12 +168,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, onAddEvent }
 
           {/* Day cells grid */}
           <div className="cal-grid" style={{ padding: '0' }}>
-            {/* Blank cells for starting day */}
             {Array.from({ length: startDayOfWeek }).map((_, i) => (
               <div key={`blank-${i}`} style={{ height: '40px' }} />
             ))}
 
-            {/* Month days 1..31 */}
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const dayNum = i + 1;
               const hasEvents = daysWithEvents.has(dayNum);
@@ -156,7 +182,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, onAddEvent }
                 <div
                   key={dayNum}
                   className={`cal-day-cell ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''}`}
-                  onClick={() => setSelectedDay(dayNum)}
+                  onClick={() => {
+                    sounds.playBeep(520, 0.03);
+                    setSelectedDay(dayNum);
+                  }}
                 >
                   <span>{dayNum}</span>
                   {hasEvents && <div className="cal-event-dot" />}
@@ -168,27 +197,61 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, onAddEvent }
 
         {/* Selected Day Invites List */}
         <div className="tasks-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <div>
               <div style={{ fontSize: '15px', fontWeight: 700, color: '#111827' }}>
                 Schedule for {selectedDay} October 2026
               </div>
               <div style={{ fontSize: '12px', color: '#64748b' }}>
-                {selectedDayEvents.length} event{selectedDayEvents.length !== 1 ? 's' : ''} scheduled
+                {filteredDayEvents.length} event{filteredDayEvents.length !== 1 ? 's' : ''} scheduled
               </div>
             </div>
 
             <button
               className="btn-secondary"
               style={{ fontSize: '12px', padding: '5px 10px' }}
-              onClick={() => setShowAddModal(true)}
+              onClick={() => {
+                sounds.playBeep(520, 0.05);
+                setShowAddModal(true);
+              }}
             >
               <Plus size={14} />
               <span>Add Invite</span>
             </button>
           </div>
 
-          {selectedDayEvents.length === 0 ? (
+          {/* Event Filter Pills */}
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
+            {[
+              { id: 'all', label: 'All Events' },
+              { id: 'coaching', label: 'Coaching' },
+              { id: 'training', label: 'L&D Training' },
+              { id: 'huddle', label: 'Team Huddles' },
+              { id: 'customer', label: 'Callbacks' }
+            ].map(f => (
+              <button
+                key={f.id}
+                onClick={() => {
+                  sounds.playBeep(480, 0.04);
+                  setEventTypeFilter(f.id as any);
+                }}
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  padding: '3px 8px',
+                  borderRadius: '9999px',
+                  border: '1px solid',
+                  borderColor: eventTypeFilter === f.id ? '#1e3a8a' : '#e2e8f0',
+                  background: eventTypeFilter === f.id ? '#eff6ff' : '#ffffff',
+                  color: eventTypeFilter === f.id ? '#1e3a8a' : '#64748b'
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {filteredDayEvents.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '24px 12px', color: '#94a3b8' }}>
               <CalendarIcon size={32} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
               <div style={{ fontSize: '13.5px', fontWeight: 600 }}>No meetings scheduled for this day</div>
@@ -196,43 +259,63 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, onAddEvent }
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {selectedDayEvents.map(ev => (
-                <div
-                  key={ev.id}
-                  style={{
-                    background: '#f8fafc',
-                    borderRadius: '10px',
-                    padding: '12px 14px',
-                    border: '1px solid #e2e8f0',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '12px'
-                  }}
-                >
+              {filteredDayEvents.map(ev => {
+                const isCompleted = completedEventIds.has(ev.id);
+                return (
                   <div
+                    key={ev.id}
                     style={{
-                      padding: '6px 10px',
-                      borderRadius: '8px',
-                      background: '#eff6ff',
-                      color: '#1d4ed8',
-                      fontSize: '12px',
-                      fontWeight: 800,
-                      whiteSpace: 'nowrap'
+                      background: isCompleted ? '#f0fdf4' : '#f8fafc',
+                      borderRadius: '10px',
+                      padding: '12px 14px',
+                      border: '1px solid',
+                      borderColor: isCompleted ? '#bbf7d0' : '#e2e8f0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      transition: 'all 0.2s ease'
                     }}
                   >
-                    {ev.time}
-                  </div>
+                    <button
+                      onClick={() => toggleEventComplete(ev.id)}
+                      style={{ color: isCompleted ? '#16a34a' : '#94a3b8', cursor: 'pointer' }}
+                      title={isCompleted ? 'Mark Incomplete' : 'Mark Completed'}
+                    >
+                      {isCompleted ? <CheckCircle2 size={18} /> : <Circle size={18} />}
+                    </button>
 
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#1e293b' }}>
-                      {ev.title}
+                    <div
+                      style={{
+                        padding: '5px 8px',
+                        borderRadius: '6px',
+                        background: '#eff6ff',
+                        color: '#1d4ed8',
+                        fontSize: '11.5px',
+                        fontWeight: 800,
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {ev.time}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                      {ev.meta}
+
+                    <div style={{ flex: 1 }}>
+                      <div
+                        style={{
+                          fontSize: '13.5px',
+                          fontWeight: 700,
+                          color: isCompleted ? '#166534' : '#1e293b',
+                          textDecoration: isCompleted ? 'line-through' : 'none'
+                        }}
+                      >
+                        {ev.title}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                        {ev.meta}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -281,7 +364,23 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, onAddEvent }
 
               <div>
                 <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                  Notes & Attendees
+                  Category
+                </label>
+                <select
+                  value={newType}
+                  onChange={e => setNewType(e.target.value as any)}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                >
+                  <option value="customer">Customer Callback</option>
+                  <option value="coaching">SOP Coaching Session</option>
+                  <option value="training">L&D Product Training</option>
+                  <option value="huddle">Store Team Huddle</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                  Notes & Details
                 </label>
                 <input
                   type="text"

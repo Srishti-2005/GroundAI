@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Sparkles, MessageSquare, ChevronRight, Award, Zap, Heart } from 'lucide-react';
+import { Sparkles, ChevronRight, Award, Zap } from 'lucide-react';
 import { PulseChannel, AgentCoach } from '../../types';
+import { sounds } from '../../utils/audio';
 
 interface PulseHomeProps {
   channels: PulseChannel[];
@@ -18,23 +19,36 @@ export const PulseHome: React.FC<PulseHomeProps> = ({
   const [searchPrompt, setSearchPrompt] = useState('');
   const [avaniAnswer, setAvaniAnswer] = useState<string | null>(null);
 
-  const handleAskAvani = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchPrompt.trim()) return;
-
-    if (searchPrompt.toLowerCase().includes('emi')) {
+  const answerQuery = (query: string) => {
+    sounds.playPop();
+    setSearchPrompt(query);
+    if (query.toLowerCase().includes('emi')) {
       setAvaniAnswer(
-        '💡 <b>AvaniBot:</b> For Ortho GRID (₹8,490), lead with the 12-month No-Cost EMI at ₹708/mo. Mention HDFC & ICICI instant cardless approval!'
+        '💳 <b>AvaniBot:</b> For Ortho GRID (₹8,490), lead with the 12-month No-Cost EMI at <b>₹708/month</b>. Emphasize: zero processing fee, instant cardless approval on Aadhaar/PAN, and 0% interest penalty.'
       );
-    } else if (searchPrompt.toLowerCase().includes('warranty') || searchPrompt.toLowerCase().includes('trial')) {
+    } else if (query.toLowerCase().includes('trial') || query.toLowerCase().includes('warranty')) {
       setAvaniAnswer(
-        '💡 <b>AvaniBot:</b> Highlight the 100-night trial and 10-year warranty against sagging > 1 inch. Proactively address trial terms to erase hesitance.'
+        '🛡️ <b>AvaniBot:</b> The 100-night trial has a <b>zero-question refund guarantee</b>. If they feel lower back stiffness within 100 nights, we pick it up for a 100% full money-back refund. Plus 10-year warranty against sagging > 1 inch.'
+      );
+    } else if (query.toLowerCase().includes('wakefit') || query.toLowerCase().includes('spine')) {
+      setAvaniAnswer(
+        '🛌 <b>AvaniBot vs Competitors:</b> Conventional memory foam traps body heat and sags under the pelvis over time. SmartGRID is made of Japanese patented hyper-elastic polymer: it remains cool via 2,500+ air channels and provides dynamic spinal rebound.'
+      );
+    } else if (query.toLowerCase().includes('festive') || query.toLowerCase().includes('coupon')) {
+      setAvaniAnswer(
+        '🏷️ <b>AvaniBot:</b> Use coupon code <b>FESTIVE2K</b> for an instant ₹2,000 rebate on all purchases above ₹20,000. Stackable with our 0% EMI!'
       );
     } else {
       setAvaniAnswer(
-        `💡 <b>AvaniBot:</b> Great question on "${searchPrompt}"! SmartGRID patented hyper-elastic polymer relieves pressure by 80% while retaining spine support.`
+        `💡 <b>AvaniBot:</b> Great question on "${query}"! SmartGRID patented hyper-elastic polymer relieves pressure points by 80% while retaining spine support.`
       );
     }
+  };
+
+  const handleAskAvani = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchPrompt.trim()) return;
+    answerQuery(searchPrompt);
   };
 
   return (
@@ -91,9 +105,35 @@ export const PulseHome: React.FC<PulseHomeProps> = ({
             </span>
           </div>
 
-          <p style={{ fontSize: '12.5px', color: '#e9d5ff', marginBottom: '10px' }}>
+          <p style={{ fontSize: '12.5px', color: '#e9d5ff', marginBottom: '8px' }}>
             Ask anything about mattress specs, competitor comparisons, or objection scripts:
           </p>
+
+          {/* Quick prompt chips */}
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
+            {[
+              '💳 How to pitch 0% EMI vs cash?',
+              '🛡️ 100-night trial refund terms?',
+              '🛌 Spine alignment vs Wakefit?',
+              '🏷️ Festive coupon FESTIVE2K?'
+            ].map(chip => (
+              <button
+                key={chip}
+                onClick={() => answerQuery(chip)}
+                style={{
+                  fontSize: '11px',
+                  background: 'rgba(255,255,255,0.16)',
+                  color: '#ffffff',
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  cursor: 'pointer'
+                }}
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
 
           <form onSubmit={handleAskAvani} style={{ display: 'flex', gap: '8px' }}>
             <input
@@ -117,12 +157,13 @@ export const PulseHome: React.FC<PulseHomeProps> = ({
             <div
               style={{
                 marginTop: '10px',
-                padding: '10px 12px',
+                padding: '12px 14px',
                 background: 'rgba(255,255,255,0.12)',
                 borderRadius: '8px',
                 fontSize: '12.5px',
-                lineHeight: 1.45,
-                border: '1px solid rgba(255,255,255,0.2)'
+                lineHeight: 1.5,
+                border: '1px solid rgba(255,255,255,0.25)',
+                animation: 'slideDown 0.2s ease'
               }}
               dangerouslySetInnerHTML={{ __html: avaniAnswer }}
             />
@@ -142,7 +183,10 @@ export const PulseHome: React.FC<PulseHomeProps> = ({
             {coaches.map(c => (
               <div
                 key={c.id}
-                onClick={() => onOpenCoach(c)}
+                onClick={() => {
+                  sounds.playBeep(520, 0.05);
+                  onOpenCoach(c);
+                }}
                 style={{
                   background: '#ffffff',
                   border: '1px solid #e2e8f0',
@@ -181,7 +225,10 @@ export const PulseHome: React.FC<PulseHomeProps> = ({
                   key={ch.id}
                   className="task-row"
                   style={{ padding: '12px 14px' }}
-                  onClick={() => onSelectChannel(ch.id)}
+                  onClick={() => {
+                    sounds.playBeep(480, 0.04);
+                    onSelectChannel(ch.id);
+                  }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
                     <div
